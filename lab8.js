@@ -1,8 +1,8 @@
 import neo4j from 'neo4j-driver';
 
-const URI      = 'neo4j+s://3a57852d.databases.neo4j.io'; // <-- tu URI
+const URI      = 'neo4j+s://3a57852d.databases.neo4j.io'; // <-- URI
 const USER     = '3a57852d';
-const PASSWORD = 'vUDGLPDASry4rLxZ9peSmtbv1mr7PUTuvGeoesqed_E';                       // <-- tu password
+const PASSWORD = 'vUDGLPDASry4rLxZ9peSmtbv1mr7PUTuvGeoesqed_E';                       // <-- password
  
 const driver = neo4j.driver(URI, neo4j.auth.basic(USER, PASSWORD));
  
@@ -142,8 +142,98 @@ const RATINGS = [
   { userId: 'u005', movieId: 6,  rating: 5, timestamp: 1700000014 },
   { userId: 'u005', movieId: 8,  rating: 2, timestamp: 1700000015 },
 ];
- 
- 
+
+// Funciones para buscar usuario, película o Rating
+async function findUser(userId) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {userId: $userId})
+       RETURN u.name AS name, u.userId AS userId`,
+      { userId: neo4j.int(userId) }
+    );
+    if (result.records.length === 0) {
+      console.log(`[findUser] No existe usuario con userId: ${userId}`);
+      return null;
+    }
+    const record = result.records[0];
+    console.log(`[findUser] name: "${record.get('name')}" | userId: ${record.get('userId')}`);
+    return { name: record.get('name'), userId: record.get('userId') };
+  } catch (err) {
+    console.error(`Error en findUser:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function findMovie(movieId) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (m:Movie {movieId: $movieId})
+       RETURN m.title AS title, m.movieId AS movieId,
+              m.year AS year, m.plot AS plot`,
+      { movieId: neo4j.int(movieId) }
+    );
+    if (result.records.length === 0) {
+      console.log(`[findMovie] No existe película con movieId: ${movieId}`);
+      return null;
+    }
+    const record = result.records[0];
+    console.log(`[findMovie] title: "${record.get('title')}" | year: ${record.get('year')} | movieId: ${record.get('movieId')}`);
+    console.log(`              plot: "${record.get('plot')}"`);
+    return {
+      title:   record.get('title'),
+      movieId: record.get('movieId'),
+      year:    record.get('year'),
+      plot:    record.get('plot'),
+    };
+  } catch (err) {
+    console.error(`Error en findMovie:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function findUserRatedMovie(userId, movieId) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {userId: $userId})-[r:RATED]->(m:Movie {movieId: $movieId})
+       RETURN
+         u.name      AS userName,
+         u.userId    AS userId,
+         m.title     AS movieTitle,
+         m.movieId   AS movieId,
+         m.year      AS year,
+         r.rating    AS rating,
+         r.timestamp AS timestamp`,
+      { userId: neo4j.int(userId), movieId: neo4j.int(movieId) }
+    );
+    if (result.records.length === 0) {
+      console.log(`[findUserRatedMovie] No existe RATED entre userId: ${userId} y movieId: ${movieId}`);
+      return null;
+    }
+    const record = result.records[0];
+    const stars  = '⭐'.repeat(record.get('rating'));
+    console.log(`\n [findUserRatedMovie] Relación encontrada:`);
+    console.log(`   Usuario : "${record.get('userName')}" (${record.get('userId')})`);
+    console.log(`   Película: "${record.get('movieTitle')}" (${record.get('year')})`);
+    console.log(`   Rating  : ${record.get('rating')}/5  ${stars}`);
+    console.log(`   Timestamp: ${record.get('timestamp')}`);
+    return {
+      userName:   record.get('userName'),
+      movieTitle: record.get('movieTitle'),
+      rating:     record.get('rating'),
+      timestamp:  record.get('timestamp'),
+    };
+  } catch (err) {
+    console.error(`Error en findUserRatedMovie:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
 
 // MAIN
 
