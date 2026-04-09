@@ -52,8 +52,44 @@ async function createMovie(title, movieId, year, plot) {
 }
  
  
+// FUNCIÓN 3: createRated(userId, movieId, rating, timestamp)
 
-// DATOS DE PRUEBA
+async function createRated(userId, movieId, rating, timestamp) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (u:User {userId: $userId})
+       MATCH (m:Movie {movieId: $movieId})
+       MERGE (u)-[r:RATED]->(m)
+       ON CREATE SET
+         r.rating    = $rating,
+         r.timestamp = $timestamp
+       RETURN u.name AS userName, m.title AS movieTitle, r.rating AS rating`,
+      {
+        userId,
+        movieId:   neo4j.int(movieId),
+        rating:    neo4j.int(rating),
+        timestamp: neo4j.int(timestamp)
+      }
+    );
+    const record = result.records[0];
+    if (record) {
+      console.log(` [RATED] "${record.get('userName')}" → "${record.get('movieTitle')}" | rating: ${record.get('rating')}/5`);
+    } else {
+      console.warn(`  No se encontró userId: "${userId}" o movieId: ${movieId}`);
+    }
+    return record;
+  } catch (err) {
+    console.error(` Error en createRated:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+ 
+ 
+
+// DATOS: 5 usuarios + 10 películas
+
 
 const USUARIOS = [
   { name: 'Alice Johnson',   userId: 'u001' },
@@ -68,7 +104,7 @@ const PELICULAS = [
   { title: 'The Matrix',                movieId: 2,  year: 1999, plot: 'Un hacker descubre la verdad sobre su realidad.' },
   { title: 'Interstellar',              movieId: 3,  year: 2014, plot: 'Exploradores viajan a través de un agujero de gusano.' },
   { title: 'The Dark Knight',           movieId: 4,  year: 2008, plot: 'Batman enfrenta al Joker en Gotham City.' },
-  { title: 'Forrest Gump',              movieId: 5,  year: 1994, plot: 'La vida extraordinaria de un hombre ordinario.' },
+  { title: 'Forrest Gump',             movieId: 5,  year: 1994, plot: 'La vida extraordinaria de un hombre ordinario.' },
   { title: 'Parasite',                  movieId: 6,  year: 2019, plot: 'Una familia pobre se infiltra en una familia rica.' },
   { title: 'The Godfather',             movieId: 7,  year: 1972, plot: 'La historia de la familia mafiosa Corleone.' },
   { title: 'Pulp Fiction',              movieId: 8,  year: 1994, plot: 'Historias entrelazadas del crimen en Los Ángeles.' },
@@ -76,43 +112,86 @@ const PELICULAS = [
   { title: 'Avengers: Endgame',         movieId: 10, year: 2019, plot: 'Los Vengadores luchan para revertir el chasquido de Thanos.' },
 ];
  
+
+// RELACIONES: cada usuario ratea mínimo 2 películas distintas
+
+
+const RATINGS = [
+  // Alice Johnson (u001) → 3 películas
+  { userId: 'u001', movieId: 1,  rating: 5, timestamp: 1700000001 },
+  { userId: 'u001', movieId: 3,  rating: 4, timestamp: 1700000002 },
+  { userId: 'u001', movieId: 5,  rating: 3, timestamp: 1700000003 },
+ 
+  // Bob Martinez (u002) → 3 películas
+  { userId: 'u002', movieId: 2,  rating: 5, timestamp: 1700000004 },
+  { userId: 'u002', movieId: 4,  rating: 4, timestamp: 1700000005 },
+  { userId: 'u002', movieId: 6,  rating: 2, timestamp: 1700000006 },
+ 
+  // Carlos Pérez (u003) → 3 películas
+  { userId: 'u003', movieId: 7,  rating: 5, timestamp: 1700000007 },
+  { userId: 'u003', movieId: 8,  rating: 4, timestamp: 1700000008 },
+  { userId: 'u003', movieId: 1,  rating: 3, timestamp: 1700000009 },
+ 
+  // Diana López (u004) → 3 películas
+  { userId: 'u004', movieId: 9,  rating: 5, timestamp: 1700000010 },
+  { userId: 'u004', movieId: 10, rating: 3, timestamp: 1700000011 },
+  { userId: 'u004', movieId: 2,  rating: 4, timestamp: 1700000012 },
+ 
+  // Eduardo Ramírez (u005) → 3 películas
+  { userId: 'u005', movieId: 3,  rating: 4, timestamp: 1700000013 },
+  { userId: 'u005', movieId: 6,  rating: 5, timestamp: 1700000014 },
+  { userId: 'u005', movieId: 8,  rating: 2, timestamp: 1700000015 },
+];
+ 
  
 
-// MAIN: ejecuta todo en orden
+// MAIN
 
 async function main() {
-  
-  console.log(' Setup');
-  
+ 
+  console.log(' LAB 08 ');
+ 
  
   // Verificar conexión
   try {
     await driver.verifyConnectivity();
-    console.log('Conexión exitosa con AuraDB\n');
+    console.log(' Conexión exitosa con AuraDB\n');
   } catch (err) {
     console.error(' No se pudo conectar a AuraDB:', err.message);
     process.exit(1);
   }
  
-  // Crear usuarios
+  // Paso 1: Crear usuarios (MERGE = no duplica si ya existen de Persona 1)
   
-  console.log(' Creando 5 usuarios...');
+  console.log(' Paso 1: Asegurando 5 usuarios en el grafo...');
   
   for (const u of USUARIOS) {
     await createUser(u.name, u.userId);
   }
  
-  // Crear películas
-  console.log(' Creando 10 películas...');
+  // Paso 2: Crear películas (MERGE = no duplica)
+  
+  console.log(' Paso 2: Asegurando 10 películas en el grafo...');
   
   for (const m of PELICULAS) {
     await createMovie(m.title, m.movieId, m.year, m.plot);
   }
  
-  console.log('\n set up completada.');
-
+  // Paso 3: Crear relaciones RATED
+  
+  console.log(' Paso 3: Creando relaciones RATED...');
+  console.log(' (cada usuario ratea mínimo 2 películas)');
+  
+  for (const r of RATINGS) {
+    await createRated(r.userId, r.movieId, r.rating, r.timestamp);
+  }
+ 
+  
+  console.log('   15 relaciones :RATED creadas en AuraDB.');
+  
  
   await driver.close();
 }
  
 main();
+
