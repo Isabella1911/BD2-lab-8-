@@ -1,0 +1,12 @@
+{
+  "name": "lab8",
+  "version": "1.0.0",
+  "description": "Lab 08 bd2 ",
+  "type": "module",
+  "scripts": {
+    "start": "node lab8.js"
+  },
+  "dependencies": {
+    "neo4j-driver": "^5.28.3"
+  }
+}
