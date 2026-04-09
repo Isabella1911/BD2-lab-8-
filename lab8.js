@@ -512,10 +512,48 @@ async function main() {
  
   
   console.log('   15 relaciones :RATED creadas en AuraDB.');
-  
- 
+
+ //grafo extendido 
+
+ console.log('\n── Creando actores (Person:Actor) ──');
+  for (const a of ACTORES) {
+    await createPersonActor(
+      a.name, a.tmdbId, a.born, a.died,
+      a.bornIn, a.url, a.imdbId, a.bio, a.poster
+    );
+  }
+
+  console.log('\n── Creando directores (Person:Director) ──');
+  for (const d of DIRECTORES) {
+    await createPersonDirector(
+      d.name, d.tmdbId, d.born, d.died,
+      d.bornIn, d.url, d.imdbId, d.bio, d.poster
+    );
+  }
+
+  console.log('\n── Creando géneros ──');
+  for (const g of GENEROS) {
+    await createGenre(g);
+  }
+
+  console.log('\n── Creando relaciones ACTED_IN ──');
+  for (const r of ACTED_IN_RELS) {
+    await createActedIn(r.tmdbId, r.movieId, r.role);
+  }
+
+  console.log('\n── Creando relaciones DIRECTED ──');
+  for (const r of DIRECTED_RELS) {
+    await createDirected(r.tmdbId, r.movieId, r.role);
+  }
+
+  console.log('\n── Creando relaciones IN_GENRE ──');
+  for (const r of IN_GENRE_RELS) {
+    await createInGenre(r.movieId, r.genreName);
+  }
+
+
   await driver.close();
-  
+
 }
  
 main();
