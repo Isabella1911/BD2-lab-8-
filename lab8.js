@@ -176,7 +176,7 @@ async function findMovie(movieId) {
       { movieId: neo4j.int(movieId) }
     );
     if (result.records.length === 0) {
-      console.log(`[findMovie] No existe película con movieId: ${movieId}`);
+      console.log(`[findMovie] No existe pelicula con movieId: ${movieId}`);
       return null;
     }
     const record = result.records[0];
@@ -215,7 +215,7 @@ async function findUserRatedMovie(userId, movieId) {
       return null;
     }
     const record = result.records[0];
-    const stars  = '⭐'.repeat(record.get('rating'));
+    const stars  = '*'.repeat(record.get('rating'));
     console.log(`\n [findUserRatedMovie] Relación encontrada:`);
     console.log(`   Usuario : "${record.get('userName')}" (${record.get('userId')})`);
     console.log(`   Película: "${record.get('movieTitle')}" (${record.get('year')})`);
@@ -234,6 +234,240 @@ async function findUserRatedMovie(userId, movieId) {
   }
 }
 
+//Funciones de creacion 
+
+async function createPersonActor(name, tmdbId, born, died, bornIn, url, imdbId, bio, poster) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MERGE (p:Person:Actor {tmdbId: $tmdbId})
+       ON CREATE SET
+         p.name   = $name,
+         p.born   = $born,
+         p.died   = $died,
+         p.bornIn = $bornIn,
+         p.url    = $url,
+         p.imdbId = $imdbId,
+         p.bio    = $bio,
+         p.poster = $poster
+       RETURN p.name AS name, p.tmdbId AS tmdbId`,
+      { name, tmdbId: neo4j.int(tmdbId), born, died, bornIn, url, imdbId: neo4j.int(imdbId), bio, poster }
+    );
+    const record = result.records[0];
+    console.log(` [ACTOR]    name: "${record.get('name')}" | tmdbId: ${record.get('tmdbId')}`);
+    return record;
+  } catch (err) {
+    console.error(` Error en createPersonActor:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function createPersonDirector(name, tmdbId, born, died, bornIn, url, imdbId, bio, poster) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MERGE (p:Person:Director {tmdbId: $tmdbId})
+       ON CREATE SET
+         p.name   = $name,
+         p.born   = $born,
+         p.died   = $died,
+         p.bornIn = $bornIn,
+         p.url    = $url,
+         p.imdbId = $imdbId,
+         p.bio    = $bio,
+         p.poster = $poster
+       RETURN p.name AS name, p.tmdbId AS tmdbId`,
+      { name, tmdbId: neo4j.int(tmdbId), born, died, bornIn, url, imdbId: neo4j.int(imdbId), bio, poster }
+    );
+    const record = result.records[0];
+    console.log(` [DIRECTOR] name: "${record.get('name')}" | tmdbId: ${record.get('tmdbId')}`);
+    return record;
+  } catch (err) {
+    console.error(` Error en createPersonDirector:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function createGenre(name) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MERGE (g:Genre {name: $name})
+       RETURN g.name AS name`,
+      { name }
+    );
+    const record = result.records[0];
+    console.log(` [GENRE]    name: "${record.get('name')}"`);
+    return record;
+  } catch (err) {
+    console.error(` Error en createGenre:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function createActedIn(tmdbId, movieId, role) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (p:Actor {tmdbId: $tmdbId})
+       MATCH (m:Movie {movieId: $movieId})
+       MERGE (p)-[r:ACTED_IN]->(m)
+       ON CREATE SET r.role = $role
+       RETURN p.name AS actorName, m.title AS movieTitle, r.role AS role`,
+      { tmdbId: neo4j.int(tmdbId), movieId: neo4j.int(movieId), role }
+    );
+    const record = result.records[0];
+    if (record) {
+      console.log(` [ACTED_IN] "${record.get('actorName')}" → "${record.get('movieTitle')}" | role: "${record.get('role')}"`);
+    }
+    return record;
+  } catch (err) {
+    console.error(` Error en createActedIn:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function createDirected(tmdbId, movieId, role) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (p:Director {tmdbId: $tmdbId})
+       MATCH (m:Movie {movieId: $movieId})
+       MERGE (p)-[r:DIRECTED]->(m)
+       ON CREATE SET r.role = $role
+       RETURN p.name AS directorName, m.title AS movieTitle, r.role AS role`,
+      { tmdbId: neo4j.int(tmdbId), movieId: neo4j.int(movieId), role }
+    );
+    const record = result.records[0];
+    if (record) {
+      console.log(`🎬 [DIRECTED] "${record.get('directorName')}" → "${record.get('movieTitle')}" | role: "${record.get('role')}"`);
+    }
+    return record;
+  } catch (err) {
+    console.error(` Error en createDirected:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+
+async function createInGenre(movieId, genreName) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (m:Movie {movieId: $movieId})
+       MATCH (g:Genre {name: $genreName})
+       MERGE (m)-[:IN_GENRE]->(g)
+       RETURN m.title AS movieTitle, g.name AS genre`,
+      { movieId: neo4j.int(movieId), genreName }
+    );
+    const record = result.records[0];
+    if (record) {
+      console.log(`  [IN_GENRE] "${record.get('movieTitle')}" → "${record.get('genre')}"`);
+    }
+    return record;
+  } catch (err) {
+    console.error(` Error en createInGenre:`, err.message);
+  } finally {
+    await session.close();
+  }
+}
+// Datos
+const ACTORES = [
+  {
+    name: 'Leonardo DiCaprio', tmdbId: 6193,
+    born: '1974-11-11', died: null, bornIn: 'Los Angeles, USA',
+    url: 'https://www.themoviedb.org/person/6193',
+    imdbId: 138, bio: 'Actor y productor estadounidense ganador del Oscar.',
+    poster: 'https://image.tmdb.org/t/p/w500/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg'
+  },
+  {
+    name: 'Christian Bale', tmdbId: 3894,
+    born: '1974-01-30', died: null, bornIn: 'Haverfordwest, Wales',
+    url: 'https://www.themoviedb.org/person/3894',
+    imdbId: 36801, bio: 'Actor galés conocido por su transformación física.',
+    poster: 'https://image.tmdb.org/t/p/w500/qCpZn2e3dimwbryLnqxZuI88PTi.jpg'
+  },
+  {
+    name: 'Matthew McConaughey', tmdbId: 10297,
+    born: '1969-11-04', died: null, bornIn: 'Uvalde, Texas, USA',
+    url: 'https://www.themoviedb.org/person/10297',
+    imdbId: 190281, bio: 'Actor texano ganador del Oscar por Dallas Buyers Club.',
+    poster: 'https://image.tmdb.org/t/p/w500/wJiGedOCZhwMx9DezY8uwbNxmAY.jpg'
+  },
+  {
+    name: 'Tom Hanks', tmdbId: 31,
+    born: '1956-07-09', died: null, bornIn: 'Concord, California, USA',
+    url: 'https://www.themoviedb.org/person/31',
+    imdbId: 158, bio: 'Actor y director estadounidense dos veces ganador del Oscar.',
+    poster: 'https://image.tmdb.org/t/p/w500/xndWFsBlClOJFRdhSt4NBwiPq2o.jpg'
+  },
+  {
+    name: 'Song Kang-ho', tmdbId: 21684,
+    born: '1967-01-17', died: null, bornIn: 'Gimhae, South Korea',
+    url: 'https://www.themoviedb.org/person/21684',
+    imdbId: 176690, bio: 'Actor surcoreano, uno de los más reconocidos del cine asiático.',
+    poster: 'https://image.tmdb.org/t/p/w500/qD55khE6msR6hD5SZsW0bFQQ6Ow.jpg'
+  },
+];
+
+const DIRECTORES = [
+  {
+    name: 'Christopher Nolan', tmdbId: 525,
+    born: '1970-07-30', died: null, bornIn: 'London, UK',
+    url: 'https://www.themoviedb.org/person/525',
+    imdbId: 634240, bio: 'Director británico-estadounidense conocido por narrativas no lineales.',
+    poster: 'https://image.tmdb.org/t/p/w500/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg'
+  },
+  {
+    name: 'Robert Zemeckis', tmdbId: 24,
+    born: '1952-05-14', died: null, bornIn: 'Chicago, Illinois, USA',
+    url: 'https://www.themoviedb.org/person/24',
+    imdbId: 924367, bio: 'Director y guionista estadounidense conocido por Forrest Gump y Back to the Future.',
+    poster: 'https://image.tmdb.org/t/p/w500/5amFiDPHMFOnGxFXEYZJKoiqZpZ.jpg'
+  },
+  {
+    name: 'Bong Joon-ho', tmdbId: 21684,
+    born: '1969-09-14', died: null, bornIn: 'Daegu, South Korea',
+    url: 'https://www.themoviedb.org/person/109PRQ',
+    imdbId: 1280592, bio: 'Director surcoreano ganador del Oscar por Parasite.',
+    poster: 'https://image.tmdb.org/t/p/w500/oVANns64bDDrRFbMnQnH0gHLJc1.jpg'
+  },
+];
+
+const GENEROS = ['Action', 'Sci-Fi', 'Drama', 'Thriller', 'Adventure', 'Comedy'];
+
+const ACTED_IN_RELS = [
+  { tmdbId: 6193,  movieId: 1, role: 'Dom Cobb' },
+  { tmdbId: 3894,  movieId: 2, role: 'Bruce Wayne / Batman' },
+  { tmdbId: 10297, movieId: 3, role: 'Cooper' },
+  { tmdbId: 31,    movieId: 4, role: 'Forrest Gump' },
+  { tmdbId: 21684, movieId: 5, role: 'Ki-taek' },
+];
+
+const DIRECTED_RELS = [
+  { tmdbId: 525,   movieId: 1, role: 'Director' },
+  { tmdbId: 525,   movieId: 2, role: 'Director' },
+  { tmdbId: 525,   movieId: 3, role: 'Director' },
+  { tmdbId: 24,    movieId: 4, role: 'Director' },
+  { tmdbId: 21684, movieId: 5, role: 'Director' },
+];
+
+const IN_GENRE_RELS = [
+  { movieId: 1, genreName: 'Sci-Fi'    },
+  { movieId: 1, genreName: 'Thriller'  },
+  { movieId: 2, genreName: 'Action'    },
+  { movieId: 2, genreName: 'Drama'     },
+  { movieId: 3, genreName: 'Sci-Fi'    },
+  { movieId: 3, genreName: 'Adventure' },
+  { movieId: 4, genreName: 'Drama'     },
+  { movieId: 4, genreName: 'Comedy'    },
+  { movieId: 5, genreName: 'Thriller'  },
+  { movieId: 5, genreName: 'Drama'     },
+];
 
 // MAIN
 
@@ -281,6 +515,7 @@ async function main() {
   
  
   await driver.close();
+  
 }
  
 main();
