@@ -215,7 +215,6 @@ async function findUserRatedMovie(userId, movieId) {
       return null;
     }
     const record = result.records[0];
-    // FIX: convertir Neo4j Integer a número JS antes de usar .repeat()
     const ratingNum = record.get('rating').toNumber();
     const stars = '*'.repeat(ratingNum);
     console.log(`\n [findUserRatedMovie] Relación encontrada:`);
@@ -434,8 +433,6 @@ const DIRECTORES = [
     poster: 'https://image.tmdb.org/t/p/w500/5amFiDPHMFOnGxFXEYZJKoiqZpZ.jpg'
   },
   {
-    // FIX: tmdbId corregido de 21684 (era igual que Song Kang-ho) a 10837 (ID real de Bong Joon-ho)
-    // FIX: URL corregida de '...109PRQ' (inválida) a la URL numérica correcta
     name: 'Bong Joon-ho', tmdbId: 10837,
     born: '1969-09-14', died: null, bornIn: 'Daegu, South Korea',
     url: 'https://www.themoviedb.org/person/10837',
@@ -447,19 +444,19 @@ const DIRECTORES = [
 const GENEROS = ['Action', 'Sci-Fi', 'Drama', 'Thriller', 'Adventure', 'Comedy'];
 
 const ACTED_IN_RELS = [
-  { tmdbId: 6193,  movieId: 1, role: 'Dom Cobb' },           // DiCaprio → Inception ✓
-  { tmdbId: 3894,  movieId: 4, role: 'Bruce Wayne / Batman' }, // FIX: Bale → The Dark Knight (era movieId 2 = The Matrix)
-  { tmdbId: 10297, movieId: 3, role: 'Cooper' },               // McConaughey → Interstellar ✓
-  { tmdbId: 31,    movieId: 5, role: 'Forrest Gump' },         // FIX: Hanks → Forrest Gump (era movieId 4 = The Dark Knight)
-  { tmdbId: 21684, movieId: 6, role: 'Ki-taek' },              // FIX: Song Kang-ho → Parasite (era movieId 5 = Forrest Gump)
+  { tmdbId: 6193,  movieId: 1, role: 'Dom Cobb' },        
+  { tmdbId: 3894,  movieId: 4, role: 'Bruce Wayne / Batman' }, 
+  { tmdbId: 10297, movieId: 3, role: 'Cooper' },          
+  { tmdbId: 31,    movieId: 5, role: 'Forrest Gump' },     
+  { tmdbId: 21684, movieId: 6, role: 'Ki-taek' },           
 ];
 
 const DIRECTED_RELS = [
-  { tmdbId: 525,   movieId: 1, role: 'Director' }, // Nolan → Inception ✓
-  { tmdbId: 525,   movieId: 3, role: 'Director' }, // Nolan → Interstellar ✓
-  { tmdbId: 525,   movieId: 4, role: 'Director' }, // FIX: Nolan → The Dark Knight (antes apuntaba a movieId 2 = The Matrix)
-  { tmdbId: 24,    movieId: 5, role: 'Director' }, // FIX: Zemeckis → Forrest Gump (antes apuntaba a movieId 4 = The Dark Knight)
-  { tmdbId: 10837, movieId: 6, role: 'Director' }, // FIX: Bong Joon-ho (tmdbId corregido) → Parasite (antes apuntaba a movieId 5)
+  { tmdbId: 525,   movieId: 1, role: 'Director' }, 
+  { tmdbId: 525,   movieId: 3, role: 'Director' },
+  { tmdbId: 525,   movieId: 4, role: 'Director' },
+  { tmdbId: 24,    movieId: 5, role: 'Director' },
+  { tmdbId: 10837, movieId: 6, role: 'Director' },
 ];
 
 const IN_GENRE_RELS = [
@@ -467,10 +464,9 @@ const IN_GENRE_RELS = [
   { movieId: 1, genreName: 'Thriller'  },  // Inception
   { movieId: 3, genreName: 'Sci-Fi'    },  // Interstellar
   { movieId: 3, genreName: 'Adventure' },  // Interstellar
-  // FIX: géneros corregidos para coincidir con las películas correctas
-  { movieId: 4, genreName: 'Action'    },  // The Dark Knight (antes tenía Drama/Comedy que no corresponden)
+  { movieId: 4, genreName: 'Action'    },  // The Dark Knight 
   { movieId: 4, genreName: 'Thriller'  },  // The Dark Knight
-  { movieId: 5, genreName: 'Drama'     },  // Forrest Gump (antes tenía Thriller/Drama)
+  { movieId: 5, genreName: 'Drama'     },  // Forrest Gump 
   { movieId: 5, genreName: 'Comedy'    },  // Forrest Gump
   { movieId: 6, genreName: 'Thriller'  },  // Parasite
   { movieId: 6, genreName: 'Drama'     },  // Parasite
