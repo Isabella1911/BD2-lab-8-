@@ -345,7 +345,7 @@ async function createDirected(tmdbId, movieId, role) {
     );
     const record = result.records[0];
     if (record) {
-      console.log(`🎬 [DIRECTED] "${record.get('directorName')}" → "${record.get('movieTitle')}" | role: "${record.get('role')}"`);
+      console.log(` [DIRECTED] "${record.get('directorName')}" → "${record.get('movieTitle')}" | role: "${record.get('role')}"`);
     }
     return record;
   } catch (err) {
